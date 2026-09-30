@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عقار - إصدار لوحة إعلانية</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        :root {
+            --aqar-green: #00873e;
+            --aqar-light-green: #8cc63f;
+            --aqar-bg: #f3f4f6;
+            --aqar-card-bg: #eaeaea;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #121212;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            gap: 25px;
+            box-sizing: border-box;
+        }
+
+        /* ===== لوحة التحكم ===== */
+        .controls-sidebar {
+            width: 360px;
+            flex-shrink: 0;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            height: fit-content;
+            max-height: 95vh;
+            overflow-y: auto;
+        }
+
+        .fields-toggle-box {
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        .fields-toggle-box .title {
+            color: #38bdf8;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .size-box {
+            background: #0f1f17;
+            border: 1px solid #14532d;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        .size-box .title {
+            color: var(--aqar-light-green);
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .size-info {
+            font-size: 12px;
+            color: #9ca3af;
+            line-height: 1.7;
+            margin-top: 6px;
+        }
+        .size-info b { color: #e5e7eb; }
+
+        .toggle-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #1a2234;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #e5e7eb;
+        }
+
+        .toggle-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #10b981;
+            cursor: pointer;
+        }
+
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; margin-bottom: 4px; font-size: 12px; color: #ccc; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #111;
+            color: #fff;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .form-group input[readonly] {
+            border-color: #14532d;
+            background: #0b1a12;
+            color: #a7f3d0;
+            cursor: not-allowed;
+        }
+        .form-row { display: flex; gap: 10px; }
+
+        .btn-action {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            background: var(--aqar-light-green);
+            color: #000;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 8px;
+            font-family: inherit;
+        }
+        .btn-action:disabled { opacity: 0.5; cursor: wait; }
+        .btn-pdf { background: #fff; color: #000; }
+
+        .status-msg {
+            font-size: 12px;
+            color: #fbbf24;
+            margin-top: 8px;
+            min-height: 16px;
+            line-height: 1.6;
+        }
+
+        /* ===== منطقة المعاينة ===== */
+        .preview-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            border-radius: 16px;
+            padding: 20px;
+            overflow: hidden;
+            position: sticky;
+            top: 20px;
+            align-self: flex-start;
+            height: calc(100vh - 40px);
+            min-width: 0;
+            box-sizing: border-box;
+        }
+
+        .banner-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform-origin: center center;
+        }
+
+        /* ===== اللوحة: كل المقاسات بوحدة --u فتكبر وتصغر مع اللوحة ===== */
+        .banner-canvas {
+            --u: 1px;
+            background: var(--aqar-bg);
+            color: #111;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+            border-radius: calc(16 * var(--u));
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .banner-main {
+            padding: calc(20 * var(--u)) calc(35 * var(--u)) calc(15 * var(--u)) calc(35 * var(--u));
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            min-height: 0;
+        }
+
+        .banner-header {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .brand-logo {
+            height: calc(62 * var(--u));
+            width: auto;
+            display: block;
+        }
+
+        .main-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .property-title {
+            text-align: center;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: calc(2 * var(--u)) 0 calc(10 * var(--u)) 0;
+        }
+        .property-title .title-single-line {
+            font-size: calc(48 * var(--u));
+            font-weight: 900;
+            line-height: 1.1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: calc(12 * var(--u));
+        }
+        .property-title .title-single-line .type { color: #000; }
+        .property-title .title-single-line .action { color: var(--aqar-green); }
+
+        .property-title .location {
+            font-size: calc(20 * var(--u));
+            font-weight: 700;
+            color: #555;
+            margin-top: calc(4 * var(--u));
+        }
+
+        .property-title .total-price {
+            font-size: calc(28 * var(--u));
+            font-weight: 900;
+            color: var(--aqar-green);
+            background: #e2f0d9;
+            display: inline-block;
+            padding: calc(4 * var(--u)) calc(18 * var(--u));
+            border-radius: calc(20 * var(--u));
+            margin-top: calc(6 * var(--u));
+        }
+
+        .license-cards {
+            display: flex;
+            flex-direction: column;
+            gap: calc(8 * var(--u));
+            width: 100%;
+            flex-shrink: 0;
+        }
+
+        .license-card {
+            background: var(--aqar-card-bg);
+            padding: calc(10 * var(--u)) calc(18 * var(--u));
+            border-radius: calc(8 * var(--u));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: calc(16 * var(--u));
+            font-weight: bold;
+        }
+
+        .license-card label {
+            color: #333;
+            font-size: calc(16 * var(--u));
+            direction: rtl;
+        }
+
+        .license-card .value-wrapper {
+            display: flex;
+            align-items: center;
+            gap: calc(6 * var(--u));
+            direction: ltr;
+        }
+
+        .license-card .value-wrapper .number,
+        .license-card .value-wrapper .unit {
+            color: #000;
+            font-weight: 900;
+        }
+
+        /* ===== التخطيط العريض (بنرات طويلة مثل 2:1 و 3:1) ===== */
+        .banner-canvas.wide .main-body {
+            flex-direction: row;
+            align-items: center;
+            gap: calc(40 * var(--u));
+        }
+        .banner-canvas.wide .property-title {
+            flex: 1;
+            margin: 0;
+        }
+        .banner-canvas.wide .license-cards {
+            flex: 1;
+            width: auto;
+        }
+
+        .banner-footer {
+            background: var(--aqar-green);
+            color: #fff;
+            padding: calc(12 * var(--u)) calc(25 * var(--u));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .footer-text { text-align: center; font-size: calc(15 * var(--u)); line-height: 1.3; }
+        .footer-text highlight { color: var(--aqar-light-green); font-weight: bold; }
+        .footer-text small { font-size: calc(11 * var(--u)); opacity: 0.85; }
+
+        .qr-box {
+            background: #fff;
+            padding: calc(4 * var(--u));
+            border-radius: calc(8 * var(--u));
+            width: calc(84 * var(--u));
+            height: calc(84 * var(--u));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+            box-sizing: border-box;
+        }
+        .qr-box img, .qr-box canvas {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain;
+        }
+
+        .store-badges {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: calc(4 * var(--u));
+            flex-shrink: 0;
+        }
+        .store-badge {
+            display: flex;
+            align-items: center;
+            gap: calc(6 * var(--u));
+            background: #000;
+            color: #fff;
+            border: calc(1 * var(--u)) solid #a6a6a6;
+            border-radius: calc(6 * var(--u));
+            height: calc(26 * var(--u));
+            width: calc(104 * var(--u));
+            padding: 0 calc(8 * var(--u));
+            box-sizing: border-box;
+            direction: rtl;
+        }
+        .store-badge svg {
+            width: calc(17 * var(--u));
+            height: calc(17 * var(--u));
+            flex-shrink: 0;
+            display: block;
+        }
+        .store-badge .txt {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.1;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .store-badge .sm { font-size: calc(6.5 * var(--u)); font-weight: 400; }
+        .store-badge .lg { font-size: calc(11 * var(--u)); font-weight: 700; direction: ltr; text-align: right; font-family: 'Tajawal', Arial, sans-serif; }
+
+        /* ===== نسخة العميل ===== */
+        .step {
+            background: #0f1f17;
+            border: 1px solid #14532d;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 14px;
+            transition: opacity .2s;
+        }
+        .step.disabled { opacity: 0.4; pointer-events: none; }
+        .step-title {
+            color: var(--aqar-light-green);
+            font-weight: 900;
+            font-size: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .step-num {
+            width: 24px; height: 24px; border-radius: 50%;
+            background: var(--aqar-light-green); color: #000;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 13px;
+        }
+        .seg { display: flex; gap: 8px; }
+        .seg label { flex: 1; cursor: pointer; }
+        .seg input { display: none; }
+        .seg span {
+            display: block; text-align: center; padding: 10px 6px;
+            border: 1px solid #444; border-radius: 8px; background: #111;
+            font-size: 13px; color: #ccc;
+        }
+        .seg input:checked + span {
+            border-color: var(--aqar-light-green);
+            background: #163a22; color: #fff; font-weight: bold;
+        }
+        .demo-notice {
+            background: #3b2a06; border: 1px solid #b45309; color: #fcd34d;
+            border-radius: 10px; padding: 10px 12px; font-size: 12px;
+            line-height: 1.7; margin-bottom: 14px;
+        }
+        .empty-msg {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            text-align: center; padding: 30px;
+            color: #9ca3af; font-size: 16px; line-height: 1.8;
+        }
+        .banner-wrapper.empty { visibility: hidden; }
+
+        .demo-watermark {
+            display: none;
+            position: absolute; inset: 0;
+            align-items: center; justify-content: center;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .demo-watermark span {
+            transform: rotate(-24deg);
+            font-size: calc(74 * var(--u));
+            font-weight: 900;
+            line-height: 1.2;
+            text-align: center;
+            color: rgba(220, 38, 38, 0.28);
+            border: calc(6 * var(--u)) solid rgba(220, 38, 38, 0.28);
+            border-radius: calc(20 * var(--u));
+            padding: calc(10 * var(--u)) calc(30 * var(--u));
+            white-space: nowrap;
+        }
+        .demo-watermark small { font-size: calc(32 * var(--u)); }
+
+        /* ===== الجوال والشاشات الصغيرة ===== */
+        @media (max-width: 900px) {
+            body { flex-direction: column; padding: 10px; gap: 12px; }
+            .preview-area {
+                order: -1; flex: none; width: 100%;
+                position: relative; top: auto; align-self: auto;
+                height: auto; min-height: 0; padding: 20px 0;
+                box-sizing: border-box; border-radius: 12px;
+            }
+            .controls-sidebar {
+                order: 1; width: 100%; max-height: none;
+                overflow-y: visible; box-sizing: border-box; padding: 15px;
+            }
+            .form-group input, .form-group select { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls-sidebar">
+
+        <div class="demo-notice" id="demoNotice" style="display:none">
+            ⚠️ وضع تجريبي: الربط مع نظام عقار غير مفعّل بعد، والبيانات في اللوحة غير حقيقية.
+        </div>
+
+        <div class="step" id="step1">
+            <div class="step-title"><span class="step-num">1</span> أدخل رابط إعلانك</div>
+            <div class="form-group" style="margin-bottom:0;">
+                <input type="text" id="adUrl" placeholder="الصق رابط إعلانك من عقار هنا"
+                       oninput="onAdUrlInput()" onkeydown="if(event.key==='Enter'){issueBanner();}">
+            </div>
+            <button class="btn-action" id="btnIssue" onclick="issueBanner()">إصدار اللوحة</button>
+            <div class="size-info" id="adUrlNote"></div>
+        </div>
+
+        <div class="step disabled" id="step2">
+            <div class="step-title"><span class="step-num">2</span> اختر المقاس والجودة</div>
+
+            <div class="form-group">
+                <label>المقاس</label>
+                <select id="sizePreset" onchange="applyPreset()">
+                    <option value="a4l">A4 أفقي (29.7 × 21 سم)</option>
+                    <option value="a4p">A4 عمودي (21 × 29.7 سم)</option>
+                    <option value="a3l">A3 أفقي (42 × 29.7 سم)</option>
+                    <option value="a3p">A3 عمودي (29.7 × 42 سم)</option>
+                    <option value="b21">بنر 2 × 1 متر</option>
+                    <option value="b31">بنر 3 × 1 متر</option>
+                    <option value="b11">مربع (100 × 100 سم)</option>
+                    <option value="sq">منشور مربع للسوشال (1080 × 1080)</option>
+                    <option value="story">ستوري (1080 × 1920)</option>
+                    <option value="custom">مقاس مخصص</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="flex: 1;">
+                    <label>العرض</label>
+                    <input type="number" id="bannerWidth" value="29.7" min="1" step="any" oninput="customSize()">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>الارتفاع</label>
+                    <input type="number" id="bannerHeight" value="21" min="1" step="any" oninput="customSize()">
+                </div>
+                <div class="form-group" style="flex: 0 0 80px;">
+                    <label>الوحدة</label>
+                    <select id="sizeUnit" onchange="customSize()">
+                        <option value="cm">سم</option>
+                        <option value="px">بكسل</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:0;">
+                <label>جودة التصدير</label>
+                <select id="exportQuality">
+                    <option value="2000">عادية (2000 بكسل للضلع الأطول)</option>
+                    <option value="4000" selected>عالية (4000 بكسل)</option>
+                    <option value="6000">عالية جداً (6000 بكسل، للبنرات الكبيرة)</option>
+                </select>
+            </div>
+            <div class="size-info" id="sizeInfo"></div>
+        </div>
+
+        <div class="step disabled" id="step3">
+            <div class="step-title"><span class="step-num">3</span> حمّل لوحتك</div>
+            <div class="seg">
+                <label><input type="radio" name="dlType" value="png" checked><span>صورة (PNG)</span></label>
+                <label><input type="radio" name="dlType" value="pdf"><span>ملف طباعة (PDF)</span></label>
+            </div>
+            <button class="btn-action" id="btnDownload" onclick="downloadSelected()">تحميل</button>
+            <div class="status-msg" id="statusMsg"></div>
+        </div>
+
+        <!-- بيانات اللوحة: تتعبأ من نظام عقار فقط، وما تظهر للعميل -->
+        <div id="dataStore" hidden>
+            <input id="propType"><select id="propAction"><option value="للبيع">للبيع</option><option value="للإيجار">للإيجار</option><option value="للحجز">للحجز</option></select>
+            <input id="propLocation"><input id="totalPriceVal"><input id="areaVal"><input id="streetVal">
+            <input id="priceVal"><input id="falNo"><input id="adNo">
+            <input type="checkbox" id="showLocation" checked><input type="checkbox" id="showTotalPrice" checked>
+            <input type="checkbox" id="showArea" checked><input type="checkbox" id="showStreet" checked>
+            <input type="checkbox" id="showPricePerMeter" checked><input type="checkbox" id="showAdNo" checked>
+            <input type="checkbox" id="showFalNo" checked><input type="checkbox" id="showApple" checked>
+            <input type="checkbox" id="showGoogle" checked><input type="checkbox" id="showHuawei" checked>
+        </div>
+    </div>
+
+    <div class="preview-area" id="previewArea">
+        <div class="empty-msg" id="emptyMsg">الصق رابط إعلانك واضغط «إصدار اللوحة» لتظهر لوحتك هنا</div>
+        <div class="banner-wrapper" id="bannerWrapper">
+            <div id="banner" class="banner-canvas">
+                <div class="banner-main">
+                    <div class="banner-header">
+                        <svg class="brand-logo" xmlns="http://www.w3.org/2000/svg" viewBox="28.50 280.22 555.96 232.02" role="img" aria-label="عقار AQAR">
+                            <path fill="#00873E" d="M 33.921875 393.902344 C 50.292969 393.902344 63.734375 380.558594 63.734375 364.179688 L 63.734375 335.542969 C 63.734375 332.613281 61.351562 330.226562 58.421875 330.226562 C 55.496094 330.226562 53.109375 332.613281 53.109375 335.542969 L 53.109375 364.179688 C 53.109375 374.703125 44.546875 383.269531 33.921875 383.269531 C 30.992188 383.269531 28.609375 385.65625 28.609375 388.585938 C 28.609375 391.515625 30.992188 393.902344 33.921875 393.902344 Z M 33.921875 393.902344"/>
+                            <path fill="#00873E" d="M 147.867188 319.273438 C 147.867188 319.757812 147.820312 320.234375 147.726562 320.710938 C 147.632812 321.1875 147.492188 321.648438 147.308594 322.09375 C 147.121094 322.542969 146.894531 322.96875 146.625 323.371094 C 146.355469 323.773438 146.050781 324.144531 145.707031 324.488281 C 145.367188 324.832031 144.992188 325.136719 144.589844 325.40625 C 144.1875 325.675781 143.765625 325.902344 143.316406 326.085938 C 142.871094 326.273438 142.410156 326.414062 141.933594 326.507812 C 141.460938 326.601562 140.980469 326.648438 140.496094 326.648438 C 140.011719 326.648438 139.53125 326.601562 139.058594 326.507812 C 138.582031 326.414062 138.121094 326.273438 137.675781 326.085938 C 137.226562 325.902344 136.800781 325.675781 136.398438 325.40625 C 135.996094 325.136719 135.625 324.832031 135.28125 324.488281 C 134.941406 324.144531 134.632812 323.773438 134.367188 323.371094 C 134.097656 322.96875 133.871094 322.542969 133.683594 322.09375 C 133.5 321.648438 133.359375 321.1875 133.265625 320.710938 C 133.171875 320.234375 133.125 319.757812 133.125 319.273438 C 133.125 318.789062 133.171875 318.308594 133.265625 317.832031 C 133.359375 317.359375 133.5 316.898438 133.683594 316.449219 C 133.871094 316.003906 134.097656 315.578125 134.367188 315.175781 C 134.632812 314.773438 134.941406 314.398438 135.28125 314.054688 C 135.625 313.714844 135.996094 313.410156 136.398438 313.140625 C 136.800781 312.871094 137.226562 312.644531 137.675781 312.457031 C 138.121094 312.273438 138.582031 312.132812 139.058594 312.039062 C 139.53125 311.941406 140.011719 311.894531 140.496094 311.894531 C 140.980469 311.894531 141.460938 311.941406 141.933594 312.039062 C 142.410156 312.132812 142.871094 312.273438 143.316406 312.457031 C 143.765625 312.644531 144.1875 312.871094 144.589844 313.140625 C 144.992188 313.410156 145.367188 313.714844 145.707031 314.054688 C 146.050781 314.398438 146.355469 314.773438 146.625 315.175781 C 146.894531 315.578125 147.121094 316.003906 147.308594 316.449219 C 147.492188 316.898438 147.632812 317.359375 147.726562 317.832031 C 147.820312 318.308594 147.867188 318.789062 147.867188 319.273438 Z M 147.867188 319.273438"/>
+                            <path fill="#00873E" d="M 160.988281 311.992188 C 161.464844 312.070312 161.929688 312.195312 162.382812 312.363281 C 162.835938 312.53125 163.269531 312.746094 163.683594 313 C 164.09375 313.253906 164.476562 313.546875 164.832031 313.875 C 165.183594 314.207031 165.503906 314.566406 165.785156 314.960938 C 166.070312 315.351562 166.3125 315.769531 166.511719 316.210938 C 166.714844 316.652344 166.871094 317.109375 166.980469 317.578125 C 167.09375 318.050781 167.15625 318.527344 167.171875 319.011719 C 167.191406 319.496094 167.160156 319.976562 167.082031 320.457031 C 167.003906 320.933594 166.882812 321.398438 166.710938 321.851562 C 166.542969 322.304688 166.332031 322.738281 166.078125 323.152344 C 165.824219 323.5625 165.53125 323.945312 165.199219 324.300781 C 164.871094 324.65625 164.507812 324.972656 164.117188 325.257812 C 163.722656 325.539062 163.308594 325.78125 162.867188 325.984375 C 162.425781 326.183594 161.96875 326.339844 161.5 326.453125 C 161.027344 326.5625 160.550781 326.628906 160.066406 326.644531 C 159.582031 326.660156 159.101562 326.632812 158.625 326.554688 C 158.148438 326.476562 157.679688 326.351562 157.226562 326.183594 C 156.773438 326.015625 156.339844 325.800781 155.929688 325.546875 C 155.519531 325.292969 155.136719 325 154.78125 324.671875 C 154.425781 324.339844 154.109375 323.980469 153.824219 323.585938 C 153.542969 323.191406 153.300781 322.777344 153.097656 322.335938 C 152.898438 321.894531 152.742188 321.4375 152.628906 320.96875 C 152.519531 320.496094 152.457031 320.019531 152.4375 319.535156 C 152.421875 319.050781 152.453125 318.570312 152.527344 318.089844 C 152.605469 317.613281 152.730469 317.148438 152.898438 316.695312 C 153.066406 316.238281 153.28125 315.808594 153.535156 315.394531 C 153.789062 314.984375 154.082031 314.601562 154.410156 314.246094 C 154.742188 313.890625 155.101562 313.574219 155.496094 313.289062 C 155.886719 313.007812 156.304688 312.765625 156.746094 312.5625 C 157.183594 312.363281 157.640625 312.207031 158.113281 312.09375 C 158.582031 311.984375 159.0625 311.917969 159.542969 311.902344 C 160.027344 311.882812 160.507812 311.914062 160.988281 311.992188 Z M 160.988281 311.992188"/>
+                            <path fill="#00873E" d="M 172.695312 421.238281 C 172.152344 420.152344 171.503906 419.175781 170.636719 418.523438 C 169.550781 417.550781 168.140625 417.113281 166.625 417.113281 L 165.972656 417.113281 C 164.457031 417.113281 163.046875 417.550781 161.960938 418.523438 C 160.988281 419.285156 160.335938 420.261719 159.902344 421.34375 L 141.6875 464.410156 C 141.363281 465.277344 141.144531 466.035156 141.144531 466.6875 C 141.144531 468.097656 141.6875 469.398438 142.554688 470.375 C 143.53125 471.460938 144.832031 472.003906 146.457031 472.003906 C 148.734375 472.003906 150.578125 470.808594 151.445312 468.75 L 155.566406 458.878906 L 177.140625 458.878906 L 181.261719 468.75 C 182.128906 470.808594 183.972656 472.003906 186.246094 472.003906 C 187.875 472.003906 189.175781 471.460938 190.152344 470.375 C 191.019531 469.398438 191.558594 468.097656 191.558594 466.6875 C 191.558594 466.035156 191.34375 465.277344 191.019531 464.410156 Z M 166.300781 429.589844 L 167.273438 432.085938 L 172.804688 448.679688 L 159.6875 448.679688 L 165.214844 432.085938 Z M 60.050781 421.128906 C 59.507812 420.042969 58.855469 419.066406 57.988281 418.417969 C 56.90625 417.441406 55.496094 417.007812 53.976562 417.007812 L 53.328125 417.007812 C 51.808594 417.007812 50.402344 417.441406 49.316406 418.417969 C 48.339844 419.175781 47.691406 420.152344 47.257812 421.128906 L 29.042969 464.191406 C 28.71875 465.058594 28.5 465.820312 28.5 466.46875 C 28.5 467.878906 29.042969 469.183594 29.910156 470.160156 C 30.886719 471.242188 32.1875 471.785156 33.8125 471.785156 C 36.089844 471.785156 37.933594 470.59375 38.800781 468.53125 L 42.917969 458.660156 L 64.496094 458.660156 L 68.613281 468.53125 C 69.480469 470.59375 71.324219 471.785156 73.601562 471.785156 C 75.226562 471.785156 76.527344 471.242188 77.503906 470.160156 C 78.371094 469.183594 78.914062 467.878906 78.914062 466.46875 C 78.914062 465.820312 78.699219 465.058594 78.371094 464.191406 Z M 53.652344 429.589844 L 54.628906 432.085938 L 60.15625 448.679688 L 47.039062 448.679688 L 52.570312 432.085938 Z M 240.023438 384.246094 C 242.949219 384.246094 245.335938 381.859375 245.335938 378.933594 C 245.335938 376.003906 242.949219 373.617188 240.023438 373.617188 L 219.207031 373.617188 C 214.871094 373.617188 210.75 371.882812 207.714844 368.734375 C 204.679688 365.699219 202.945312 361.578125 202.945312 357.238281 C 202.945312 348.234375 210.316406 340.859375 219.316406 340.859375 C 222.242188 340.859375 225.0625 341.617188 227.554688 343.027344 C 230.808594 344.980469 233.191406 347.800781 234.710938 351.597656 L 235.035156 352.355469 L 235.144531 352.355469 C 235.902344 353.550781 237.203125 354.308594 238.613281 354.632812 C 240.671875 354.960938 242.734375 354.199219 243.925781 352.464844 C 244.902344 350.945312 245.117188 349.101562 244.46875 347.257812 C 242.300781 341.617188 238.179688 336.84375 232.976562 333.808594 C 228.855469 331.421875 224.085938 330.121094 219.316406 330.121094 C 212.050781 330.121094 205.222656 332.941406 200.125 338.039062 C 195.03125 343.136719 192.210938 349.96875 192.210938 357.128906 C 192.210938 363.09375 194.164062 368.84375 197.742188 373.507812 L 171.613281 373.507812 C 172.914062 371.773438 174.105469 369.820312 174.972656 367.761719 C 176.382812 364.398438 177.140625 360.816406 177.140625 357.128906 C 177.140625 347.582031 171.9375 338.582031 163.695312 333.699219 C 159.578125 331.3125 154.914062 330.011719 150.035156 330.011719 C 135.074219 330.011719 122.933594 342.160156 122.933594 357.128906 C 122.933594 363.09375 124.882812 368.84375 128.460938 373.507812 L 100.382812 373.507812 C 90.082031 373.292969 81.625 364.722656 81.625 354.417969 L 81.625 317.535156 C 81.625 314.609375 79.238281 312.222656 76.3125 312.222656 C 73.386719 312.222656 71 314.609375 71 317.535156 L 71 354.417969 C 71 370.796875 84.335938 384.140625 100.816406 384.140625 Z M 150.035156 340.96875 C 152.964844 340.96875 155.78125 341.726562 158.277344 343.136719 C 163.261719 346.066406 166.40625 351.488281 166.40625 357.347656 C 166.40625 366.351562 159.035156 373.726562 150.035156 373.726562 C 141.039062 373.726562 133.664062 366.351562 133.664062 357.347656 C 133.664062 348.34375 141.039062 340.96875 150.035156 340.96875 Z M 137.027344 444.234375 C 137.027344 429.265625 124.882812 417.113281 109.921875 417.113281 C 94.960938 417.113281 82.816406 429.265625 82.816406 444.234375 C 82.816406 459.203125 94.960938 471.351562 109.921875 471.351562 C 112.089844 471.351562 114.367188 471.132812 116.425781 470.59375 L 124.339844 478.835938 C 125.316406 479.921875 126.617188 480.464844 128.027344 480.464844 L 128.136719 480.464844 C 129.546875 480.464844 130.847656 479.921875 131.820312 478.945312 C 133.882812 476.882812 133.992188 473.519531 131.929688 471.460938 L 126.402344 465.601562 C 133.125 460.613281 137.027344 452.695312 137.027344 444.234375 Z M 109.921875 427.855469 C 118.921875 427.855469 126.292969 435.230469 126.292969 444.234375 C 126.292969 453.238281 118.921875 460.613281 109.921875 460.613281 C 100.921875 460.613281 93.550781 453.238281 93.550781 444.234375 C 93.550781 435.230469 100.921875 427.855469 109.921875 427.855469 Z M 243.816406 453.5625 C 243.167969 451.609375 242.191406 449.875 240.78125 448.355469 C 240.347656 447.8125 239.699219 447.269531 239.15625 446.835938 C 240.890625 445.644531 242.191406 444.34375 243.167969 442.714844 C 245.011719 440.003906 245.878906 436.964844 245.878906 433.820312 C 245.878906 430.675781 245.117188 427.746094 243.492188 425.359375 C 241.976562 422.863281 239.480469 420.804688 236.230469 419.285156 C 233.191406 417.875 229.074219 417.113281 224.195312 417.113281 L 207.496094 417.113281 C 206.089844 417.113281 204.789062 417.65625 203.703125 418.742188 C 202.726562 419.828125 202.183594 421.019531 202.183594 422.539062 L 202.183594 466.578125 C 202.183594 467.988281 202.726562 469.289062 203.703125 470.375 C 205.871094 472.4375 209.449219 472.21875 211.183594 470.375 C 212.269531 469.398438 212.917969 468.097656 212.917969 466.578125 L 212.917969 452.042969 L 225.710938 452.042969 C 227.988281 452.042969 229.722656 452.476562 230.917969 453.238281 C 232.109375 453.996094 232.976562 454.972656 233.410156 456.164062 C 233.953125 457.574219 234.386719 458.984375 234.492188 460.394531 C 234.710938 461.804688 234.820312 463.214844 234.820312 464.410156 L 234.820312 466.578125 C 234.820312 468.097656 235.253906 469.398438 236.335938 470.484375 C 237.3125 471.460938 238.722656 471.894531 240.132812 471.894531 C 241.542969 471.894531 242.84375 471.351562 243.925781 470.375 C 245.011719 469.398438 245.445312 468.097656 245.445312 466.578125 L 245.445312 463.324219 C 245.445312 462.132812 245.335938 460.828125 245.117188 459.203125 C 245.011719 457.25 244.46875 455.40625 243.816406 453.5625 Z M 235.144531 434.253906 C 235.144531 436.640625 234.277344 438.265625 232.324219 439.460938 C 230.15625 440.871094 227.339844 441.523438 223.761719 441.523438 L 212.808594 441.523438 L 212.808594 427.421875 L 223.433594 427.421875 C 226.6875 427.421875 229.289062 427.746094 231.023438 428.503906 C 232.542969 429.046875 233.625 429.804688 234.167969 430.675781 C 234.820312 431.652344 235.144531 432.953125 235.144531 434.253906 Z M 583.058594 414.402344 L 572.324219 402.796875 C 571.671875 402.039062 570.699219 401.496094 569.613281 401.386719 L 541.640625 397.15625 L 528.847656 374.917969 C 528.414062 374.160156 527.765625 373.507812 527.003906 373.074219 L 517.898438 368.519531 L 510.308594 356.585938 L 508.574219 340.96875 C 508.464844 340.097656 508.140625 339.230469 507.597656 338.582031 L 485.804688 311.679688 C 485.15625 310.917969 484.179688 310.378906 483.203125 310.050781 L 450.246094 302.675781 C 449.488281 302.457031 448.621094 302.566406 447.75 302.785156 L 442.65625 304.519531 L 429.972656 298.011719 C 428.34375 297.144531 426.394531 297.359375 424.984375 298.554688 L 417.285156 304.84375 L 392.785156 296.058594 C 392.132812 295.84375 391.484375 295.734375 390.722656 295.84375 L 379.339844 297.035156 L 363.726562 281.847656 C 362.535156 280.765625 360.910156 280.222656 359.28125 280.65625 L 333.261719 287.597656 C 332.285156 287.816406 331.527344 288.359375 330.984375 289.117188 L 324.914062 296.277344 L 313.097656 296.277344 C 311.035156 296.277344 309.195312 297.6875 308.652344 299.636719 L 303.121094 320.03125 C 302.582031 321.875 303.339844 323.9375 304.964844 325.019531 L 311.6875 329.578125 L 337.382812 368.519531 L 337.382812 378.714844 C 337.382812 380.015625 337.925781 381.210938 338.898438 382.078125 L 352.886719 394.660156 L 361.992188 408.761719 L 361.992188 435.445312 C 361.992188 436.75 362.644531 438.160156 363.621094 438.917969 L 382.484375 454.972656 L 415.550781 509.96875 C 416.417969 511.378906 417.9375 512.246094 419.5625 512.246094 C 421.191406 512.246094 422.707031 511.378906 423.464844 509.96875 L 430.945312 497.386719 L 462.820312 497.820312 L 470.628906 502.265625 C 472.578125 503.351562 474.964844 502.917969 476.375 501.289062 L 495.890625 478.183594 L 573.082031 455.515625 C 574.710938 455.082031 575.902344 453.777344 576.335938 452.152344 L 584.140625 418.742188 C 584.464844 417.113281 584.03125 415.597656 583.058594 414.402344 Z M 471.605469 399.542969 L 443.523438 448.03125 C 442.875 449.113281 441.679688 449.875 440.488281 449.875 C 439.1875 449.875 437.996094 449.222656 437.34375 448.03125 L 409.261719 399.542969 C 402.757812 388.261719 402.757812 374.808594 409.261719 363.636719 C 415.769531 352.464844 427.371094 345.632812 440.488281 345.632812 C 453.605469 345.632812 465.097656 352.355469 471.605469 363.636719 C 478.109375 374.917969 478.109375 388.261719 471.605469 399.542969 Z M 471.605469 399.542969"/>
+                            <path fill="#00873E" d="M 455.449219 381.425781 C 455.449219 389.671875 448.726562 396.398438 440.378906 396.398438 C 432.03125 396.398438 425.417969 389.671875 425.417969 381.425781 C 425.417969 373.183594 432.140625 366.457031 440.378906 366.457031 C 448.621094 366.457031 455.449219 373.183594 455.449219 381.425781 Z M 455.449219 381.425781"/>
+                        </svg>
+                    </div>
+
+                    <div class="main-body">
+                        <div class="property-title">
+                            <div class="title-single-line">
+                                <span class="type" id="viewPropType">شقة</span>
+                                <span class="action" id="viewPropAction">للبيع</span>
+                            </div>
+                            <div class="location" id="viewLocation">حي النرجس - الرياض</div>
+                            <div class="total-price" id="viewTotalPrice">1,200,000 ريال</div>
+                        </div>
+
+                        <div class="license-cards">
+                            <div class="license-card" id="cardArea">
+                                <label>المساحة :</label>
+                                <div class="value-wrapper">
+                                    <span class="unit">م²</span>
+                                    <span class="number" id="viewArea">350</span>
+                                </div>
+                            </div>
+                            <div class="license-card" id="cardStreet">
+                                <label>عرض الشارع :</label>
+                                <div class="value-wrapper">
+                                    <span class="unit">متر</span>
+                                    <span class="number" id="viewStreet">20</span>
+                                </div>
+                            </div>
+                            <div class="license-card" id="cardPricePerMeter">
+                                <label>سعر المتر :</label>
+                                <div class="value-wrapper">
+                                    <span class="number" id="viewPrice">4,500 ريال</span>
+                                </div>
+                            </div>
+                            <div class="license-card" id="cardFalNo">
+                                <label>رقم رخصة فال :</label>
+                                <div class="value-wrapper">
+                                    <span class="number" id="viewFalNo">1200013881</span>
+                                </div>
+                            </div>
+                            <div class="license-card" id="cardAdNo">
+                                <label>رقم ترخيص الإعلان :</label>
+                                <div class="value-wrapper">
+                                    <span class="number" id="viewAdNo">7201056329</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="banner-footer">
+                    <div class="store-badges" id="storeBadges">
+                        <div class="store-badge" id="badgeApple">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#fff" d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>
+                            <div class="txt"><span class="sm">تنزيل من</span><span class="lg">App Store</span></div>
+                        </div>
+                        <div class="store-badge" id="badgeGoogle">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#FFD500" d="M22.018 13.298l-3.919 2.218-3.515-3.493 3.543-3.521 3.891 2.202a1.49 1.49 0 0 1 0 2.594z"/><path fill="#00A0FF" d="M1.337.924a1.486 1.486 0 0 0-.112.568v21.017c0 .217.045.419.124.6l11.155-11.087L1.337.924z"/><path fill="#00E676" d="M13.544 10.989l3.258-3.238L3.45.195a1.466 1.466 0 0 0-.946-.179l11.04 10.973z"/><path fill="#FF3A44" d="M13.544 13.056l-11 10.933c.298.036.612-.016.906-.183l13.324-7.54-3.23-3.21z"/></svg>
+                            <div class="txt"><span class="sm">احصل عليه من</span><span class="lg">Google Play</span></div>
+                        </div>
+                        <div class="store-badge" id="badgeHuawei">
+                            <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="11" fill="#CE0E2D"/><path d="M17.5 19.5v-3.2a6.5 6.5 0 0 1 13 0v3.2" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><rect x="12" y="19" width="24" height="18" rx="5" fill="#fff"/><path d="M18.5 27.5q5.5 6.5 11 0" fill="none" stroke="#CE0E2D" stroke-width="2.8" stroke-linecap="round"/></svg>
+                            <div class="txt"><span class="sm">اكتشف المزيد على</span><span class="lg">AppGallery</span></div>
+                        </div>
+                    </div>
+
+                    <div class="footer-text">
+                        يمكنك الاطلاع على تفاصيل العقار<br>
+                        عبر <highlight>تطبيق عقار</highlight><br>
+                        <small>المنصة الإلكترونية الأولى في المملكة</small>
+                    </div>
+
+                    <div id="qrcode" class="qr-box"></div>
+                </div>
+
+                <div class="demo-watermark" id="demoWatermark"><span>نسخة تجريبية<br><small>بيانات غير حقيقية</small></span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let customQRImage = null;
+
+        // المقاسات الجاهزة: [عرض، ارتفاع، وحدة]
+        const PRESETS = {
+            a4l:   [29.7, 21,   'cm'],
+            a4p:   [21,   29.7, 'cm'],
+            a3l:   [42,   29.7, 'cm'],
+            a3p:   [29.7, 42,   'cm'],
+            b21:   [200,  100,  'cm'],
+            b31:   [300,  100,  'cm'],
+            b11:   [100,  100,  'cm'],
+            sq:    [1080, 1080, 'px'],
+            story: [1080, 1920, 'px']
+        };
+
+        const DESIGN_LONG_SIDE = 1000; // طول الضلع الأطول في التصميم (بكسل داخل الصفحة)
+        const WIDE_RATIO = 1.8;        // من هذي النسبة وفوق نستخدم التخطيط العريض
+        const state = { W0: 1000, H0: 707 };
+
+        function render() {
+            document.getElementById('viewPropType').innerText = document.getElementById('propType').value;
+            document.getElementById('viewPropAction').innerText = document.getElementById('propAction').value;
+            document.getElementById('viewLocation').innerText = document.getElementById('propLocation').value;
+            document.getElementById('viewTotalPrice').innerText = document.getElementById('totalPriceVal').value;
+
+            let areaRaw = document.getElementById('areaVal').value.replace(/[^\d]/g, '');
+            document.getElementById('viewArea').innerText = areaRaw || document.getElementById('areaVal').value;
+
+            let streetRaw = document.getElementById('streetVal').value.replace(/[^\d]/g, '');
+            document.getElementById('viewStreet').innerText = streetRaw || document.getElementById('streetVal').value;
+
+            document.getElementById('viewPrice').innerText = document.getElementById('priceVal').value;
+            document.getElementById('viewFalNo').innerText = document.getElementById('falNo').value;
+            document.getElementById('viewAdNo').innerText = document.getElementById('adNo').value;
+        }
+
+        function toggleFields() {
+            document.getElementById('viewLocation').style.display = document.getElementById('showLocation').checked ? 'block' : 'none';
+            document.getElementById('viewTotalPrice').style.display = document.getElementById('showTotalPrice').checked ? 'inline-block' : 'none';
+            document.getElementById('cardArea').style.display = document.getElementById('showArea').checked ? 'flex' : 'none';
+            document.getElementById('cardStreet').style.display = document.getElementById('showStreet').checked ? 'flex' : 'none';
+            document.getElementById('cardPricePerMeter').style.display = document.getElementById('showPricePerMeter').checked ? 'flex' : 'none';
+            document.getElementById('cardFalNo').style.display = document.getElementById('showFalNo').checked ? 'flex' : 'none';
+            document.getElementById('cardAdNo').style.display = document.getElementById('showAdNo').checked ? 'flex' : 'none';
+            const showApple = document.getElementById('showApple').checked;
+            const showGoogle = document.getElementById('showGoogle').checked;
+            const showHuawei = document.getElementById('showHuawei').checked;
+            document.getElementById('badgeApple').style.display = showApple ? 'flex' : 'none';
+            document.getElementById('badgeGoogle').style.display = showGoogle ? 'flex' : 'none';
+            document.getElementById('badgeHuawei').style.display = showHuawei ? 'flex' : 'none';
+            document.getElementById('storeBadges').style.display = (showApple || showGoogle || showHuawei) ? 'flex' : 'none';
+            fitBanner();
+        }
+
+        // اختيار مقاس جاهز
+        function applyPreset() {
+            const key = document.getElementById('sizePreset').value;
+            if (PRESETS[key]) {
+                const [w, h, unit] = PRESETS[key];
+                document.getElementById('bannerWidth').value = w;
+                document.getElementById('bannerHeight').value = h;
+                document.getElementById('sizeUnit').value = unit;
+            }
+            updateDimensions();
+        }
+
+        // المعلن غيّر الأرقام يدوياً
+        function customSize() {
+            document.getElementById('sizePreset').value = 'custom';
+            updateDimensions();
+        }
+
+        function getSize() {
+            let w = parseFloat(document.getElementById('bannerWidth').value);
+            let h = parseFloat(document.getElementById('bannerHeight').value);
+            if (!(w > 0)) w = 29.7;
+            if (!(h > 0)) h = 21;
+            return { w, h, unit: document.getElementById('sizeUnit').value };
+        }
+
+        function fmt(n) { return (Math.round(n * 100) / 100).toString(); }
+
+        // يحسب حجم التصدير النهائي بالبكسل (مع حد أمان للذاكرة)
+        function getExportPixels() {
+            const { w, h } = getSize();
+            const ratio = w / h;
+            const longSide = parseInt(document.getElementById('exportQuality').value) || 4000;
+            let outW, outH;
+            if (ratio >= 1) { outW = longSide; outH = longSide / ratio; }
+            else { outH = longSide; outW = longSide * ratio; }
+
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const maxPixels = isMobile ? 16e6 : 60e6;
+            let reduced = false;
+            if (outW * outH > maxPixels) {
+                const f = Math.sqrt(maxPixels / (outW * outH));
+                outW *= f; outH *= f; reduced = true;
+            }
+            return { outW: Math.round(outW), outH: Math.round(outH), reduced };
+        }
+
+        function updateDimensions() {
+            const { w, h, unit } = getSize();
+            const ratio = w / h;
+
+            // حجم التصميم داخل الصفحة: الضلع الأطول = 1000
+            let W0, H0;
+            if (ratio >= 1) { W0 = DESIGN_LONG_SIDE; H0 = DESIGN_LONG_SIDE / ratio; }
+            else { H0 = DESIGN_LONG_SIDE; W0 = DESIGN_LONG_SIDE * ratio; }
+            W0 = Math.max(Math.round(W0), 120);
+            H0 = Math.max(Math.round(H0), 120);
+            state.W0 = W0; state.H0 = H0;
+
+            const banner = document.getElementById('banner');
+            banner.style.width = W0 + 'px';
+            banner.style.height = H0 + 'px';
+
+            // وحدة التكبير: كل النصوص والأحجام تتناسب مع اللوحة
+            const wide = ratio >= WIDE_RATIO;
+            banner.classList.toggle('wide', wide);
+            let u;
+            if (wide) u = Math.min(W0 / 1000, H0 / 480);
+            else u = Math.min(W0 / 850, H0 / 600);
+            banner.style.setProperty('--u', u + 'px');
+
+            // معلومات المقاس
+            const g = (a, b) => b ? g(b, a % b) : a;
+            const { outW, outH, reduced } = getExportPixels();
+            const unitLabel = unit === 'cm' ? 'سم' : 'بكسل';
+            document.getElementById('sizeInfo').innerHTML =
+                `المقاس: <b>${fmt(w)} × ${fmt(h)} ${unitLabel}</b><br>` +
+                `الصورة الناتجة: <b>${outW} × ${outH} بكسل</b>` +
+                (reduced ? '<br><span style="color:#fbbf24">تم تخفيض الدقة تلقائياً لتناسب ذاكرة الجهاز</span>' : '');
+
+            fitBanner();
+        }
+
+        function fitBanner() {
+            const area = document.getElementById('previewArea');
+            const wrapper = document.getElementById('bannerWrapper');
+            const banner = document.getElementById('banner');
+
+            const bannerWidth = banner.offsetWidth;
+            const bannerHeight = banner.offsetHeight;
+            const isMobile = window.innerWidth <= 900;
+
+            if (isMobile) {
+                const availableWidth = area.clientWidth - 20;
+                const scale = Math.min(availableWidth / bannerWidth, 1);
+                wrapper.style.transform = `scale(${scale})`;
+                area.style.height = (bannerHeight * scale + 40) + 'px';
+            } else {
+                area.style.height = '';
+                const availableWidth = area.clientWidth - 40;
+                const availableHeight = area.clientHeight - 40;
+                const scale = Math.min(availableWidth / bannerWidth, availableHeight / bannerHeight, 1);
+                wrapper.style.transform = `scale(${scale})`;
+            }
+        }
+
+
+        // =====================================================================
+        //  الربط مع نظام عقار (للفريق التقني)
+        //  التفاصيل الكاملة في ملف: aqar-api-integration-spec.md
+        // =====================================================================
+        const AQAR_API = {
+            // رابط الـ API. لو فاضي تشتغل الأداة بوضع تجريبي (بيانات وهمية + علامة "نسخة تجريبية" على اللوحة).
+            // مثال: 'https://api.aqar.fm/banner-tool/v1/ad'
+            // الطلب: GET {url}?url=<رابط الإعلان>&id=<رقم الإعلان إن وُجد>
+            url: '',
+            timeoutMs: 8000
+        };
+
+        // تحويل استجابة الـ API إلى حقول الأداة.
+        // لو اختلفت أسماء الحقول عندكم عدّلوا هذي الدالة فقط.
+        function mapApiResponse(d) {
+            const num = v => (v === null || v === undefined || v === '') ? '' : Number(v).toLocaleString('en-US');
+            const money = v => { const n = num(v); return n ? n + ' ريال' : ''; };
+            const str = v => (v === null || v === undefined) ? '' : String(v);
+            return {
+                propType: str(d.propertyType),
+                propAction: str(d.adType),                       // للبيع | للإيجار | للحجز
+                propLocation: [d.district, d.city].filter(Boolean).join(' - '),
+                totalPriceVal: d.priceText ? str(d.priceText) : money(d.totalPrice),
+                areaVal: str(d.area),
+                streetVal: str(d.streetWidth),
+                priceVal: money(d.pricePerMeter),
+                falNo: str(d.falLicenseNumber),
+                adNo: str(d.adLicenseNumber),
+                qrUrl: str(d.shortUrl)                           // اختياري: رابط قصير للـ QR
+            };
+        }
+
+        // بيانات وهمية تُستخدم فقط لما يكون AQAR_API.url فاضي (وضع تجريبي)
+        const DEMO_DATA = {
+            propertyType: 'شقة', adType: 'للإيجار', district: 'حي النرجس', city: 'الرياض',
+            totalPrice: 45000, area: 180, streetWidth: 15,
+            falLicenseNumber: '0000000000', adLicenseNumber: '0000000000'
+        };
+
+        // الحقل ← الخيار اللي يظهره/يخفيه (لو القيمة فاضية نخفي البطاقة)
+        const FIELD_TOGGLE = {
+            propLocation: 'showLocation', totalPriceVal: 'showTotalPrice', areaVal: 'showArea',
+            streetVal: 'showStreet', priceVal: 'showPricePerMeter', falNo: 'showFalNo', adNo: 'showAdNo'
+        };
+
+        let qrOverride = null;
+        let apiReq = 0;
+        let issued = false;
+        let demoMode = false;
+
+        function setIssued(v) {
+            issued = v;
+            document.getElementById('step2').classList.toggle('disabled', !v);
+            document.getElementById('step3').classList.toggle('disabled', !v);
+            document.getElementById('bannerWrapper').classList.toggle('empty', !v);
+            document.getElementById('emptyMsg').style.display = v ? 'none' : 'flex';
+            document.getElementById('demoWatermark').style.display = (v && demoMode) ? 'flex' : 'none';
+            if (v) fitBanner();
+        }
+
+        // أي تغيير في الرابط يلغي اللوحة الحالية ويطلب إصدار جديد
+        function onAdUrlInput() {
+            apiReq++;
+            qrOverride = null;
+            setIssued(false);
+            document.getElementById('adUrlNote').innerText = '';
+        }
+
+        async function issueBanner() {
+            const note = document.getElementById('adUrlNote');
+            const btn = document.getElementById('btnIssue');
+            const raw = document.getElementById('adUrl').value.trim();
+
+            let u;
+            try { u = new URL(raw); } catch (e) { u = null; }
+            if (!u || !/(^|\.)aqar\.fm$/.test(u.hostname)) {
+                note.innerText = 'الرجاء إدخال رابط إعلان صحيح من عقار.';
+                return;
+            }
+
+            const myReq = ++apiReq;
+            btn.disabled = true;
+            note.innerText = 'جاري جلب بيانات إعلانك...';
+            try {
+                let data;
+                if (!AQAR_API.url) {
+                    data = DEMO_DATA;
+                    demoMode = true;
+                } else {
+                    demoMode = false;
+                    const segs = u.pathname.split('/').filter(Boolean);
+                    const idMatch = (segs[segs.length - 1] || '').match(/(\d{6,})$/);
+                    const query = '?url=' + encodeURIComponent(raw) + (idMatch ? '&id=' + idMatch[1] : '');
+                    const ctrl = new AbortController();
+                    const timer = setTimeout(() => ctrl.abort(), AQAR_API.timeoutMs);
+                    try {
+                        const res = await fetch(AQAR_API.url + query, { signal: ctrl.signal, headers: { 'Accept': 'application/json' } });
+                        if (res.status === 404) { const err = new Error('notfound'); err.notFound = true; throw err; }
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        data = await res.json();
+                    } finally { clearTimeout(timer); }
+                }
+                if (myReq !== apiReq) return;      // المستخدم غيّر الرابط أثناء الجلب
+                applyAdData(mapApiResponse(data));
+                setIssued(true);
+                note.innerText = demoMode ? 'تم إصدار لوحة تجريبية.' : 'تم إصدار اللوحة. اختر المقاس والجودة ثم حمّل.';
+            } catch (e) {
+                if (myReq !== apiReq) return;
+                note.innerText = e.notFound
+                    ? 'ما لقينا هذا الإعلان. تأكد من الرابط وحاول مرة ثانية.'
+                    : 'تعذر جلب بيانات الإعلان حالياً. حاول مرة ثانية بعد قليل.';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function applyAdData(m) {
+            const setVal = (id, v) => { document.getElementById(id).value = v; };
+            setVal('propType', m.propType);
+            const actionSel = document.getElementById('propAction');
+            if ([...actionSel.options].some(o => o.value === m.propAction)) actionSel.value = m.propAction;
+
+            Object.keys(FIELD_TOGGLE).forEach(id => {
+                setVal(id, m[id] || '');
+                document.getElementById(FIELD_TOGGLE[id]).checked = !!m[id];
+            });
+
+            qrOverride = m.qrUrl || null;
+            render();
+            toggleFields();
+            generateQR();
+        }
+
+        function generateQR() {
+            if (customQRImage) return;
+            const url = qrOverride || document.getElementById('adUrl').value || 'https://sa.aqar.fm/';
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            // نولّد الـ QR بدقة عالية ويتصغر بالـ CSS، عشان يطلع حاد في الطباعة
+            new QRCode(qrContainer, { text: url, width: 512, height: 512, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M });
+        }
+
+        function setBusy(busy, msg) {
+            document.getElementById('btnDownload').disabled = busy;
+            document.getElementById('statusMsg').innerText = msg || '';
+        }
+
+        function downloadSelected() {
+            if (!issued) return;
+            const type = document.querySelector('input[name="dlType"]:checked').value;
+            return type === 'pdf' ? downloadPDF() : downloadImage();
+        }
+
+        // يصوّر اللوحة بالدقة المطلوبة
+        async function captureBanner() {
+            const banner = document.getElementById('banner');
+            const { outW, outH } = getExportPixels();
+            const scale = outW / state.W0;
+
+            const canvas = await html2canvas(banner, {
+                scale: scale,
+                useCORS: true,
+                backgroundColor: '#f3f4f6',
+                scrollX: 0,
+                scrollY: -window.scrollY,
+                onclone: (doc) => {
+                    // في النسخة المصدّرة: بدون تصغير المعاينة وبدون زوايا مدورة أو ظل
+                    const wrapper = doc.getElementById('bannerWrapper');
+                    const area = doc.getElementById('previewArea');
+                    const b = doc.getElementById('banner');
+                    if (wrapper) wrapper.style.transform = 'none';
+                    if (area) { area.style.overflow = 'visible'; area.style.height = 'auto'; area.style.minHeight = '0'; }
+                    if (b) { b.style.borderRadius = '0'; b.style.boxShadow = 'none'; }
+                }
+            });
+            return canvas;
+        }
+
+        async function downloadImage() {
+            try {
+                setBusy(true, 'جاري تجهيز الصورة...');
+                if (document.fonts && document.fonts.ready) await document.fonts.ready;
+                const canvas = await captureBanner();
+                const link = document.createElement('a');
+                link.download = 'لوحة-عقار.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                setBusy(false, '');
+            } catch (e) {
+                console.error(e);
+                setBusy(false, 'تعذر تجهيز الصورة. جرّب جودة أقل أو مقاس أصغر.');
+            }
+        }
+
+        async function downloadPDF() {
+            try {
+                setBusy(true, 'جاري تجهيز ملف الطباعة...');
+                if (document.fonts && document.fonts.ready) await document.fonts.ready;
+                const { jsPDF } = window.jspdf;
+                const canvas = await captureBanner();
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+                // حجم صفحة الـ PDF = المقاس الحقيقي اللي اختاره المعلن
+                let { w, h, unit } = getSize();
+                const maxPt = 14000;
+                const toPt = unit === 'cm' ? 28.3465 : 0.75;
+                const k = Math.min(1, maxPt / (Math.max(w, h) * toPt));
+                w *= k; h *= k;
+
+                const pdf = new jsPDF({
+                    orientation: w >= h ? 'l' : 'p',
+                    unit: unit === 'cm' ? 'cm' : 'px',
+                    format: [w, h],
+                    hotfixes: unit === 'px' ? ['px_scaling'] : []
+                });
+                pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
+                pdf.save('لوحة-طباعة.pdf');
+                setBusy(false, k < 1 ? 'تم تصغير صفحة الـ PDF لأن المقاس كبير جداً، والنسبة محفوظة.' : '');
+            } catch (e) {
+                console.error(e);
+                setBusy(false, 'تعذر تجهيز الملف. جرّب جودة أقل أو مقاس أصغر.');
+            }
+        }
+
+        document.getElementById('exportQuality').addEventListener('change', updateDimensions);
+
+        window.onload = function() {
+            render();
+            toggleFields();
+            applyPreset();
+            generateQR();
+            setIssued(false);
+            if (!AQAR_API.url) document.getElementById('demoNotice').style.display = 'block';
+            window.addEventListener('resize', fitBanner);
+            window.addEventListener('orientationchange', () => setTimeout(fitBanner, 200));
+        };
+    </script>
+</body>
+</html>
